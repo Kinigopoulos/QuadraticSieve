@@ -2,6 +2,7 @@ from prime import factorize, fast
 from symbol_legendre import get_non_quad
 
 
+# Given numbers a and p, this algorithm returns a number x so that (x ^ 2) mop p = a
 def toneli_shanks(a, p):
     z = get_non_quad(p)
     q = p - 1

@@ -1,0 +1,3 @@
+Cython~=0.29.14
+sage~=9.0
+gmpy2

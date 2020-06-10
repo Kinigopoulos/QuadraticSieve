@@ -7,7 +7,7 @@ def solve(a, b, mod):
         b = matrix(GF(mod), b)
         return A.right_kernel(b).list()
     except ValueError:
-        return -1
+        return []
 
 
 def QS_Sieve(num):

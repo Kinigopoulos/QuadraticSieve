@@ -13,12 +13,9 @@ def fast_sieve_initialize(upper_bound):
             p = position
             primes.append(p)
             p_factor = p
-            counter = 0
-            multipleOfTwo = 2 * p
             while p_factor < upper_bound:
                 sieve[p_factor] = True
-                counter += 1
-                p_factor += 2 * p  # + 2 * counter
+                p_factor += 2 * p
         else:
             position += 2
     return primes
@@ -88,5 +85,5 @@ def miller_rabin_test(num, k):
 # Sieve of Eratosthenis's Initialization
 # Random Initialization
 random.seed()
-eratosthenis_max_number = 10000
+eratosthenis_max_number = 100000
 eratosthenis = fast_sieve_initialize(eratosthenis_max_number)
