@@ -1,6 +1,6 @@
 cimport cython
 from libc.stdlib cimport malloc, free
-from gmpy2 import xmpz, log2
+from gmpy2 import xmpz, log2 as log_2
 
 
 @cython.boundscheck(False)
@@ -79,7 +79,7 @@ def initialize_sieve(py_n, py_x, py_z, py_a1, py_a2, py_V, py_list):
     i = 0
     for i in range(0, p_list_length):
         p_list[i] = py_list[i]
-        log_primes[i] = int(round(log2(py_list[i])))
+        log_primes[i] = int(round(log_2(py_list[i])))
 
 
 def de_allocate_sieve():
@@ -105,7 +105,7 @@ def b_sieving():
     cdef long int j
     cdef int smooth_limit
     while not ret:
-        smooth_limit = int(log2((x + min_x) ** 2 - n)) - log_primes[-1] - 2
+        smooth_limit = int(log_2((x + min_x) ** 2 - n)) - log_primes[-1] - 2
 
         for j in range(1, p_list_length):
             while a1[j] < z:
@@ -117,21 +117,20 @@ def b_sieving():
                 a2[j] += p_list[j]
             a2[j] -= z
         for j in range(0, z):
-            # print(V[j], " <", smooth_limit)
             if V[j] >= smooth_limit:
                 ret.append(int(x + j + min_x))
             V[j] = 0
         min_x += z
-        # print(n, x, min_x, z)
     return ret
 
 
-def factor(b_smooth_num, n, p_list):
-    cdef long int length = len(p_list)
+def factor(b_smooth_num, n):
+    global p_list
+    global p_list_length
     remainder = xmpz(b_smooth_num ** 2 - n)
-    factor_list = [0] * length
+    factor_list = [0] * p_list_length
     cdef long int j = 0
-    while j < length:
+    while j < p_list_length:
         if remainder == 1:
             break
         while remainder.__mod__(p_list[j]) == 0:

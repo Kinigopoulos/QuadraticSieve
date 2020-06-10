@@ -1,5 +1,4 @@
-from prime import fast_sieve_initialize, fermat_test, miller_rabin_test, eratosthenis_test
-from b_smooth import is_b_smooth, brute_smooth
+from prime import fermat_test, miller_rabin_test
 import symbol_legendre
 from modulo_equation import solve
 from toneli_shanks import toneli_shanks
@@ -13,7 +12,7 @@ def factor_base(n):
         log_n = log(n)
         e_x = (log_n * log(log_n)) ** 0.5
         e = exp(e_x)
-        return int(ceil(e) ** 0.525)
+        return int(ceil(e) ** 0.5)
     return int(n ** 0.35)
 
 
@@ -23,7 +22,6 @@ def QuadraticSieve(n):
     print("B:", B)
 
     prime_list = eratosthenis(B + 1)  # Get a prime list with prime numbers up to B.
-
 
     # Keep primes that are quadratic residue.
     p_list = [2]  # 2 will always be in the list.
@@ -49,22 +47,7 @@ def QuadraticSieve(n):
     print("DONE")
 
     # Sieving part. Starting from the ceil of root of N to find B-Smooth numbers.
-    # This function will help later... It returns a list with the factors of a b-smooth number.
-    def factor(b_smooth_num):
-        remainder = b_smooth_num ** 2 - n
-        factor_list = [0] * len(p_list)
-        for j in range(0, len(p_list)):
-            if remainder == 1:
-                break
-            while remainder % p_list[j] == 0:
-                remainder //= p_list[j]
-                factor_list[j] += 1
-        if remainder != 1:
-            return []
-        return factor_list
-
     z = p_list[-1] * 3
-    pos = 0
     eq = []
     smooth_numbers = []
     final_factor = 1
@@ -81,27 +64,6 @@ def QuadraticSieve(n):
 
     initialize_sieve(n, x, z, a1, a2, V, p_list)
     while final_factor == 1 or final_factor == n:
-        def b_sieving(min_x):
-            ret = []
-            while len(ret) < 1:
-                smooth_limit = ((x + min_x) ** 2 - n).bit_length() - log_primes[-1] - 2
-
-                for j in range(1, len(p_list)):
-                    while a1[j] < len(V) + min_x:
-                        V[a1[j] - min_x] += log_primes[j]
-                        a1[j] += p_list[j]
-                    while a2[j] < len(V) + min_x:
-                        V[a2[j] - min_x] += log_primes[j]
-                        a2[j] += p_list[j]
-
-                for j in range(0, len(V)):
-                    # print(V[j], "<", smooth_limit, len(smooth_numbers))
-                    if V[j] >= smooth_limit:
-                        ret.append(x + j + min_x)
-                    V[j] = 0
-                min_x += z
-            return ret, min_x
-
         tries += 1
         print(len(sol))
         print("Finding smooth numbers.", tries, "tries. This procedure will take the longest...", end=" ")
@@ -113,15 +75,16 @@ def QuadraticSieve(n):
 
             for s in S:
                 # factor_matrix, is_smooth = b_smooth(s ** 2 - n, B, p_list)
-                #if not is_smooth:
+                # if not is_smooth:
                 #    continue
                 # print("SMOOTHNESS:", brute_smooth(s**2-n, B + 1), "///", s)
-                factor_matrix = c_factor(s, n, p_list)
+                factor_matrix = c_factor(s, n)
                 if factor_matrix:
                     smooth_numbers.append(s)
                     eq.append(factor_matrix)
-                    if len(smooth_numbers) >= len(p_list):
-                        sol = solve(eq, [0] * len(smooth_numbers), 2)
+                    if len(smooth_numbers) >= len(p_list) * 0.95:
+                        sol = solve(eq, 2)
+                        # print(sol)
                         if sol and len(sol) > tries:
                             print("Solutions:", sol)
                             print(smooth_numbers)
@@ -137,7 +100,6 @@ def QuadraticSieve(n):
                 sol2.append(int(i))
             x1 = 1
             x2 = 1
-            print(sol2)
             for i in range(0, sol2.__len__()):
                 if sol2[i] > 0:
                     x1 *= (smooth_numbers[i] ** 2 - n) ** sol2[i]
@@ -146,15 +108,16 @@ def QuadraticSieve(n):
             x1 = isqrt(x1)
             x2 = isqrt(x2)
 
-            final_factor = gcd(x2 - x1, n)
-            print("___SOLUTION___: ", final_factor)
             final_factor = gcd(x2 + x1, n)
+            print("___SOLUTION___: ", final_factor)
+            if final_factor != 1 and final_factor != n:
+                break
+            final_factor = gcd(x2 - x1, n)
             print("___SOLUTION___: ", final_factor)
             if final_factor != 1 and final_factor != n:
                 break
             num_sol += 1
     print(final_factor)
-    print(pos)
     return final_factor
 
 
@@ -177,7 +140,6 @@ def factorise(non_factorised_numbers):
             final_factors.append(n)
             continue
         elif fermat_test(n) and miller_rabin_test(n, 10):
-            print(eratosthenis_test(n))
             final_factors.append(n)
             continue
 
@@ -193,6 +155,7 @@ def factorise(non_factorised_numbers):
 def print_factors(n):
     non_factorised_numbers = [n]
     final_factors = factorise(non_factorised_numbers)
+    print()
     print(n, "'s factors are:")
     for f in final_factors[:len(final_factors) - 1]:
         if f != 1:
@@ -206,7 +169,7 @@ small_factors = eratosthenis(eratosthenis_upper_bound)
 print("Initializing sieve: ")
 
 start = timer()
-print_factors(2 ** 277 - 1)
+print_factors(2 ** 223 - 1)
 end = timer()
 
 print("Completed in", end - start, "seconds")

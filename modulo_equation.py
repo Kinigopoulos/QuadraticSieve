@@ -1,12 +1,14 @@
 from sage.all import *
 
 
-def solve(a, b, mod):
+def solve(a, mod):
     try:
-        A = matrix(GF(mod), a).transpose()
-        b = matrix(GF(mod), b)
-        return A.right_kernel(b).list()
+        ring = IntegerModRing(mod)
+        A = matrix(ring, a).transpose()
+
+        return A.right_kernel().list()
     except ValueError:
+        print("Value Error from Sage")
         return []
 
 
