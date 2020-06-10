@@ -4,9 +4,10 @@ from modulo_equation import solve
 from toneli_shanks import toneli_shanks
 from math import exp, log, ceil, gcd, isqrt
 from timeit import default_timer as timer
-from test import b_sieving as c_sieve, factor as c_factor, initialize_sieve, fast_sieve_initialize as eratosthenis
+from test import b_sieving, factor, initialize_sieve, fast_sieve_initialize, de_allocate_sieve
 
 
+# Computes and returns B, given N.
 def factor_base(n):
     if n > 10 ** 13:
         log_n = log(n)
@@ -21,7 +22,7 @@ def QuadraticSieve(n):
     B = factor_base(n)
     print("B:", B)
 
-    prime_list = eratosthenis(B + 1)  # Get a prime list with prime numbers up to B.
+    prime_list = fast_sieve_initialize(B + 1)  # Get a prime list with prime numbers up to B.
 
     # Keep primes that are quadratic residue.
     p_list = [2]  # 2 will always be in the list.
@@ -36,78 +37,76 @@ def QuadraticSieve(n):
     print("x:", x)
     a1 = [0]
     a2 = [0]
+    # Find (a(i) ^ 2) mod 2 = n with one if. Also, 2 has one solutions so it's stored on a1.
+    if (x ** 2 - n) % 2 != 0:
+        a1[0] = 1
     print("Collecting appropriate primes from the sieve...", end="\t")
-    for p in p_list[1:]:  # prime number 2 is a special occasion and it will be reviewed later
+    for p in p_list[1:]:  # Execute toneli shanks with all primes, excluding 2.
         x1, x2 = toneli_shanks(n, p)
         if x1 >= 0:  # In case of a negative result, it means that the algorithm found no solution.
             a1.append((x1 - x) % p)
             a2.append((x2 - x) % p)
         else:
-            p_list.remove(p)
+            p_list.remove(p)  # Just in case there are no solutions, remove the prime from the list.
     print("DONE")
 
     # Sieving part. Starting from the ceil of root of N to find B-Smooth numbers.
-    z = p_list[-1] * 3
-    eq = []
-    smooth_numbers = []
-    final_factor = 1
-    tries = 0
-    sol = []
+    z = p_list[-1] * 3  # Range for sieving B-smooth numbers.
+    equations = []  # Stores all relations exported by factor(). More on that below.
+    smooth_numbers = []  # Saves all B-smooth numbers.
+    final_factor = 1  # The saint-number we are going to return, once finished.
+    tries = 0  # Trial and retry. In case of failure, we'll look for more b-smooth numbers and solutions.
+    solutions = []  # Solutions exported from modulo_equation().
 
-    V = [0] * z
-    if (x ** 2 - n) % 2 != 0:
-        a1[0] = 1
+    # Initialization of sieve with Cython.
+    initialize_sieve(n, x, z, a1, a2, p_list)
 
-    log_primes = p_list.copy()
-    for i in range(0, len(log_primes)):
-        log_primes[i] = log_primes[i].bit_length() - 1
-
-    initialize_sieve(n, x, z, a1, a2, V, p_list)
+    # While our final_factor is not an actual factor, keep TRYING!!!
     while final_factor == 1 or final_factor == n:
         tries += 1
-        print(len(sol))
+        print(len(solutions))
         print("Finding smooth numbers.", tries, "tries. This procedure will take the longest...", end=" ")
         while True:
-            # S, pos = b_sieving(pos)  # find_b_smooth_numbers(n, x, z, p_list, a1, a2, pos)
-            S = c_sieve()
-            # break
+            S = b_sieving()  # Get the possible B-smooth numbers.
             print("Found these smooth numbers:", S, "Completion:", len(smooth_numbers), "/", len(p_list))
 
             for s in S:
-                # factor_matrix, is_smooth = b_smooth(s ** 2 - n, B, p_list)
-                # if not is_smooth:
-                #    continue
-                # print("SMOOTHNESS:", brute_smooth(s**2-n, B + 1), "///", s)
-                factor_matrix = c_factor(s, n)
-                if factor_matrix:
-                    smooth_numbers.append(s)
-                    eq.append(factor_matrix)
+                factor_matrix = factor(s, n)  # Factor each possible B-smooth number and make sure it's smooth.
+                if factor_matrix:  # For each B-smooth number found
+                    smooth_numbers.append(s)  # KEEP IT, they're precious!
+                    equations.append(factor_matrix)  # Append the list exported from factors, they will be needed for
+                    # the next step.
+
+                    # If we're close to finding relations, start searching.
                     if len(smooth_numbers) >= len(p_list) * 0.95:
-                        sol = solve(eq, 2)
-                        # print(sol)
-                        if sol and len(sol) > tries:
-                            print("Solutions:", sol)
+                        solutions = solve(equations, 2)
+                        print("Checking for solutions from the modulus equation...")
+                        # solutions[0] will always give an array filled with zeros and we don't want that.
+                        if solutions and len(solutions) > tries:
+                            print("Solutions:", solutions)
                             print(smooth_numbers)
                             break
-            if sol and len(sol) > tries:
+            if solutions and len(solutions) > tries:
                 break
 
         print("DONE")
         num_sol = 1
-        while num_sol < len(sol):
+        while num_sol < len(solutions):
             sol2 = []
-            for i in sol[num_sol]:
+            for i in solutions[num_sol]:
                 sol2.append(int(i))
             x1 = 1
             x2 = 1
             for i in range(0, sol2.__len__()):
                 if sol2[i] > 0:
-                    x1 *= (smooth_numbers[i] ** 2 - n) ** sol2[i]
-                    x2 *= (smooth_numbers[i] ** sol2[i]) ** 2
-
+                    x1 *= (smooth_numbers[i] ** 2 - n) ** sol2[i]  # Define x1.
+                    x2 *= (smooth_numbers[i] ** sol2[i]) ** 2      # Define x2.
+            # Get their square roots.
             x1 = isqrt(x1)
             x2 = isqrt(x2)
 
+            # Find their their gcd with n, by adding them or subtracting them.
+            # If the value returned is not 1 or n, congratulate yourself, you just found a factor!
             final_factor = gcd(x2 + x1, n)
             print("___SOLUTION___: ", final_factor)
             if final_factor != 1 and final_factor != n:
@@ -117,10 +116,13 @@ def QuadraticSieve(n):
             if final_factor != 1 and final_factor != n:
                 break
             num_sol += 1
+    de_allocate_sieve()  # Deallocate all that memory from Cython's part.
     print(final_factor)
-    return final_factor
+    return final_factor  # Return the prize!
 
 
+# This function check if the number n has a factor in the eratosthenes's sieve and returns it.
+# Otherwise, it invokes Quadratic Sieve.
 def get_factor(n):
     for p in small_factors:
         if n % p == 0:
@@ -128,6 +130,7 @@ def get_factor(n):
     return QuadraticSieve(n)
 
 
+# Collects all factors of the number. Stops until all numbers in the list are primes.
 def factorise(non_factorised_numbers):
     final_factors = []
     while non_factorised_numbers:
@@ -152,6 +155,7 @@ def factorise(non_factorised_numbers):
     return final_factors
 
 
+# Prints beautifully all the factors of the number n.
 def print_factors(n):
     non_factorised_numbers = [n]
     final_factors = factorise(non_factorised_numbers)
@@ -164,12 +168,13 @@ def print_factors(n):
         print(final_factors[-1])
 
 
+# Eratosthenes's sieve limit. Change it to taste.
 eratosthenis_upper_bound = 100000000
-small_factors = eratosthenis(eratosthenis_upper_bound)
+small_factors = fast_sieve_initialize(eratosthenis_upper_bound)
 print("Initializing sieve: ")
 
 start = timer()
-print_factors(2 ** 223 - 1)
+print_factors(2 ** 223 - 1)  # Insert your number to factorise here.
 end = timer()
 
 print("Completed in", end - start, "seconds")

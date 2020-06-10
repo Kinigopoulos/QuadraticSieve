@@ -1,7 +1,7 @@
 from prime import fast
 
 
-# Returns the (a|p) symbol
+# Returns the (a|p) symbol.
 def symbol(a, p):
     a %= p
     if a == 0:
@@ -12,7 +12,7 @@ def symbol(a, p):
     return -1
 
 
-# Returns a number a so (a|p)=-1
+# Returns a number a so that (a|p)=-1
 def get_non_quad(p):
     a = 2
     while a < p:
